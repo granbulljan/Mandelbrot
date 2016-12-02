@@ -4,6 +4,7 @@ using System.Drawing.Imaging;
 using System.Threading;
 using System.Windows.Forms;
 using System.Collections.Generic;
+using System.Globalization;
 
 /// <summary>
 /// Generates bitmap of Mandelbrot Set and display it on the form.
@@ -34,9 +35,15 @@ public class MandelbrotSetForm : Form
     bool ColorStyle2 = true;
 
     public List<Color> Colors = new List<Color>();
+    private List<Color> Colors2 = new List<Color>();
+
+    CultureInfo culture;
 
     public MandelbrotSetForm()
     {
+        culture = (CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
+        culture.NumberFormat.NumberDecimalSeparator = ",";
+
         ColorStyle2 = false;
         Colors.Add(Color.Peru); Colors.Add(Color.Navy); Colors.Add(Color.AntiqueWhite);
 
@@ -49,7 +56,7 @@ public class MandelbrotSetForm : Form
         this.MaximizeBox = false;
         this.StartPosition = FormStartPosition.CenterScreen;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
-        this.ClientSize = new Size(1024, 1124);
+        this.ClientSize = new Size(700, 764);
 
         this.Load += new System.EventHandler(this.MainForm_Load);
         pictureBox2.MouseClick += new MouseEventHandler(picturBox2_Click);
@@ -67,36 +74,50 @@ public class MandelbrotSetForm : Form
 
         if (iteration >= MaxIterations)
         {
-            return Color.Black;
+            return Color.Beige;
         }
         else
         {
-            // Reduce the error in mu.
-            for (int i = 0; i < 3; i++)
-            {
-                z = z & c;
-                iteration++;
-            }
-
-            double mu = iteration + 1 -
-                Math.Log(Math.Log(z.Magnitude())) / MaxValueExtentLog;
-            if (ColorStyle2)
-            {
-                mu = mu / MaxIterations * Colors.Count;
-            }
-            int clr1 = (int)mu;
-            double t2 = mu - clr1;
-            double t1 = 1 - t2;
-            clr1 = clr1 % Colors.Count;
-            int clr2 = (clr1 + 1) % Colors.Count;
-
-            byte r = (byte)(Colors[clr1].R * t1 + Colors[clr2].R * t2);
-            byte g = (byte)(Colors[clr1].G * t1 + Colors[clr2].G * t2);
-            byte b = (byte)(Colors[clr1].B * t1 + Colors[clr2].B * t2);
-
-            return Color.FromArgb(255, r, g, b);
+            //return GetZebraColor(iteration);
+            return niceColor(z, c, iteration);
         }
     }
+
+    private Color niceColor(ComplexNumber z, ComplexNumber c, int iteration)
+    {
+        for (int i = 0; i < 3; i++)
+        {
+            z = z & c;
+            iteration++;
+        }
+
+        double mu = iteration + 1 -
+            Math.Log(Math.Log(z.Magnitude())) / MaxValueExtentLog;
+        if (ColorStyle2)
+        {
+            mu = mu / MaxIterations * Colors.Count;
+        }
+        int clr1 = (int)mu;
+        double t2 = mu - clr1;
+        double t1 = 1 - t2;
+        clr1 = clr1 % Colors.Count;
+        int clr2 = (clr1 + 1) % Colors.Count;
+
+        byte r = (byte)(Colors[clr1].R * t1 + Colors[clr2].R * t2);
+        byte g = (byte)(Colors[clr1].G * t1 + Colors[clr2].G * t2);
+        byte b = (byte)(Colors[clr1].B * t1 + Colors[clr2].B * t2);
+
+        return Color.FromArgb(255, r, g, b);
+    }
+
+    private Color GetZebraColor(int iteration)
+    {
+        if (iteration % 2 == 0)
+            return Color.White;
+        else
+            return Color.Black;
+    }
+
 
     void GenerateBitmap(Bitmap bitmap) 
     {
@@ -121,7 +142,7 @@ public class MandelbrotSetForm : Form
 
     }
 
-    private void thread_Proc(Size clientSize) //(int i = 0; i < bitmap.Height; i++)
+    private void thread_Proc(Size clientSize) 
     {
         // start from small image to provide instant display for user
         Size size = clientSize;
@@ -151,6 +172,11 @@ public class MandelbrotSetForm : Form
 
     delegate void SetNewBitmapDelegate(Bitmap image, Rectangle rec);
 
+    private double StringToDouble(string inString)
+    {       
+        return Convert.ToDouble(inString, culture);
+    }
+
     #region UI elements
     //Click on the fractal
     void picturBox2_Click(object sender, MouseEventArgs e)
@@ -176,11 +202,15 @@ public class MandelbrotSetForm : Form
         thread.Abort();
         if (textBoxX.Text != null && textBoxY.Text != null && textBoxScale.Text != null && textBoxIter.Text != null)
         {
-            double x = double.Parse(textBoxX.Text);
-            double y = double.Parse(textBoxY.Text);
+            //double x = double.Parse(textBoxX.Text, System.Globalization.NumberStyles.Number);
+            double x = StringToDouble(textBoxX.Text);
+            
+            //double y = double.Parse(textBoxY.Text, System.Globalization.NumberStyles.Number);
+            double y = StringToDouble(textBoxY.Text);
             beginX = x; beginY = y;
 
-            double scl = double.Parse(textBoxScale.Text);
+            //double scl = double.Parse(textBoxScale.Text, System.Globalization.NumberStyles.Number);
+            double scl = StringToDouble(textBoxScale.Text);
             if (scl > 0)
                 GlobScale = scl;
             else
@@ -188,11 +218,13 @@ public class MandelbrotSetForm : Form
                 GlobScale = 1;
                 textBoxScale.Text = "1";
             }
-            int max = int.Parse(textBoxIter.Text);
+            int max = int.Parse(textBoxIter.Text, System.Globalization.NumberStyles.Number);
             MaxIterations = max;
         }
         MainForm_Load(sender, e);
     }
+
+
 
     //Nice button
     private void button2_Click(object sender, EventArgs e)
@@ -258,46 +290,46 @@ public class MandelbrotSetForm : Form
             this.pictureBox2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
             this.pictureBox2.Location = new System.Drawing.Point(0, 64);
             this.pictureBox2.Name = "pictureBox2";
-            this.pictureBox2.Size = new System.Drawing.Size(1026, 1026);
+            this.pictureBox2.Size = new System.Drawing.Size(700, 700);
             this.pictureBox2.TabIndex = 0;
             this.pictureBox2.TabStop = false;
             // 
             // textBoxX
             // 
-            this.textBoxX.Location = new System.Drawing.Point(134, 21);
+            this.textBoxX.Location = new System.Drawing.Point(134, 7);
             this.textBoxX.Name = "textBoxX";
-            this.textBoxX.Size = new System.Drawing.Size(100, 20);
+            this.textBoxX.Size = new System.Drawing.Size(100, 22);
             this.textBoxX.TabIndex = 2;
             this.textBoxX.Text = "0";
             // 
             // textBoxY
             // 
-            this.textBoxY.Location = new System.Drawing.Point(253, 21);
+            this.textBoxY.Location = new System.Drawing.Point(134, 35);
             this.textBoxY.Name = "textBoxY";
-            this.textBoxY.Size = new System.Drawing.Size(100, 20);
+            this.textBoxY.Size = new System.Drawing.Size(100, 22);
             this.textBoxY.TabIndex = 3;
             this.textBoxY.Text = "0";
             // 
             // textBoxScale
             // 
-            this.textBoxScale.Location = new System.Drawing.Point(359, 21);
+            this.textBoxScale.Location = new System.Drawing.Point(240, 7);
             this.textBoxScale.Name = "textBoxScale";
-            this.textBoxScale.Size = new System.Drawing.Size(100, 20);
+            this.textBoxScale.Size = new System.Drawing.Size(100, 22);
             this.textBoxScale.TabIndex = 4;
             this.textBoxScale.Text = "1";
             // 
             // textBoxIter
             // 
-            this.textBoxIter.Location = new System.Drawing.Point(465, 21);
+            this.textBoxIter.Location = new System.Drawing.Point(240, 35);
             this.textBoxIter.Name = "textBoxIter";
-            this.textBoxIter.Size = new System.Drawing.Size(100, 20);
+            this.textBoxIter.Size = new System.Drawing.Size(100, 22);
             this.textBoxIter.TabIndex = 5;
             this.textBoxIter.Text = "1000";
             // 
             // nice
             // 
             this.nice.AccessibleName = "Nice";
-            this.nice.Location = new System.Drawing.Point(578, 35);
+            this.nice.Location = new System.Drawing.Point(357, 36);
             this.nice.Name = "nice";
             this.nice.Size = new System.Drawing.Size(75, 23);
             this.nice.TabIndex = 6;
@@ -308,7 +340,7 @@ public class MandelbrotSetForm : Form
             // original
             // 
             this.original.AccessibleName = "Original";
-            this.original.Location = new System.Drawing.Point(578, 12);
+            this.original.Location = new System.Drawing.Point(357, 7);
             this.original.Name = "original";
             this.original.Size = new System.Drawing.Size(75, 23);
             this.original.TabIndex = 7;
@@ -318,7 +350,7 @@ public class MandelbrotSetForm : Form
             // 
             // SaveButton
             // 
-            this.SaveButton.Location = new System.Drawing.Point(659, 18);
+            this.SaveButton.Location = new System.Drawing.Point(550, 8);
             this.SaveButton.Name = "SaveButton";
             this.SaveButton.Size = new System.Drawing.Size(75, 23);
             this.SaveButton.TabIndex = 8;
@@ -332,10 +364,11 @@ public class MandelbrotSetForm : Form
             this.ColourSelection.Items.AddRange(new object[] {
             "Bands",
             "YellowBlue",
-            "ROGYBIV"});
-            this.ColourSelection.Location = new System.Drawing.Point(754, 20);
+            "ROGYBIV",
+            "Kayleigh"});
+            this.ColourSelection.Location = new System.Drawing.Point(450, 7);
             this.ColourSelection.Name = "ColourSelection";
-            this.ColourSelection.Size = new System.Drawing.Size(82, 21);
+            this.ColourSelection.Size = new System.Drawing.Size(82, 24);
             this.ColourSelection.TabIndex = 9;
             this.ColourSelection.Text = "Bands";
             this.ColourSelection.SelectedIndexChanged += new System.EventHandler(this.ColourSelection_SelectedIndexChanged);
@@ -349,9 +382,9 @@ public class MandelbrotSetForm : Form
             "Nice2",
             "Nice3",
             "Nice4"});
-            this.LocationSelection.Location = new System.Drawing.Point(862, 20);
+            this.LocationSelection.Location = new System.Drawing.Point(450, 37);
             this.LocationSelection.Name = "LocationSelection";
-            this.LocationSelection.Size = new System.Drawing.Size(71, 21);
+            this.LocationSelection.Size = new System.Drawing.Size(82, 24);
             this.LocationSelection.TabIndex = 10;
             this.LocationSelection.Text = "Original";
             this.LocationSelection.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
@@ -377,7 +410,7 @@ public class MandelbrotSetForm : Form
 
     }
 
-    #endregion
+   
 
     private void button1_Click_1(object sender, EventArgs e)
     {
@@ -401,6 +434,11 @@ public class MandelbrotSetForm : Form
         if (ColourSelection.SelectedIndex == 2)
         {
             Colors.Add(Color.Red); Colors.Add(Color.Orange); Colors.Add(Color.Green); Colors.Add(Color.Yellow); Colors.Add(Color.Blue); Colors.Add(Color.Indigo); Colors.Add(Color.Violet);
+            ColorStyle2 = true;
+        }
+        if(ColourSelection.SelectedIndex == 3)
+        {
+            Colors.Add(Color.Turquoise); Colors.Add(Color.IndianRed); Colors.Add(Color.IndianRed);
             ColorStyle2 = true;
         }
     }
@@ -438,8 +476,9 @@ public class MandelbrotSetForm : Form
             textBoxScale.Text = "1,52587890625E-05";
         }
     }
-}
 
+    #endregion
+}
 
 struct ComplexNumber
 {

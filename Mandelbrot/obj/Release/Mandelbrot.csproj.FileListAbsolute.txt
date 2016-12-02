@@ -6,3 +6,12 @@ C:\Users\Jan\Desktop\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.Properties.Res
 C:\Users\Jan\Desktop\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.csproj.GenerateResource.Cache
 C:\Users\Jan\Desktop\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.exe
 C:\Users\Jan\Desktop\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.pdb
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\bin\Release\Mandelbrot.exe.config
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.exe
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.pdb
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\bin\Release\Mandelbrot.exe
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\bin\Release\Mandelbrot.pdb
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.csprojResolveAssemblyReference.cache
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\MandelbrotSetForm.resources
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.Properties.Resources.resources
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.csproj.GenerateResource.Cache
