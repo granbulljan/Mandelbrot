@@ -12,9 +12,6 @@ using System.Globalization;
 public class MandelbrotSetForm : Form
 {
     Thread thread;
-    const double MaxValueExtent = 2.0;
-    const double MaxValueExtentSqr = 2.0 * 2.0;
-    double MaxValueExtentLog = Math.Log(2.0);
 
     private Button OKButton;
     private PictureBox pictureBox2;
@@ -28,14 +25,8 @@ public class MandelbrotSetForm : Form
     private ComboBox ColourSelection;
     private ComboBox LocationSelection;
 
-    int MaxIterations = 1000;
-    double beginX = 0;
-    double beginY = 0;
-    double GlobScale = 1;
-    bool ColorStyle2 = true;
+    MandelBrotCalc mandelbrot;
 
-    public List<Color> Colors = new List<Color>();
-    private List<Color> Colors2 = new List<Color>();
 
     CultureInfo culture;
 
@@ -43,10 +34,6 @@ public class MandelbrotSetForm : Form
     {
         culture = (CultureInfo)System.Threading.Thread.CurrentThread.CurrentCulture.Clone();
         culture.NumberFormat.NumberDecimalSeparator = ",";
-
-        ColorStyle2 = false;
-        Colors.Add(Color.Peru); Colors.Add(Color.Navy); Colors.Add(Color.AntiqueWhite);
-
         InitializeComponent();
 
         // form creation
@@ -57,92 +44,21 @@ public class MandelbrotSetForm : Form
         this.StartPosition = FormStartPosition.CenterScreen;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.ClientSize = new Size(700, 764);
-
         this.Load += new System.EventHandler(this.MainForm_Load);
         pictureBox2.MouseClick += new MouseEventHandler(picturBox2_Click);
+
+        mandelbrot = new MandelBrotCalc(pictureBox2);
     }
-
-    private Color CalcMandelbrotSetColor(ComplexNumber c)
-    {
-        int iteration = 0;
-        ComplexNumber z = new ComplexNumber();
-        do
-        {
-            z = z & c;
-            iteration++;
-        } while (z.Magnitude() < MaxValueExtentSqr && iteration < MaxIterations);
-
-        if (iteration >= MaxIterations)
-        {
-            return Color.Beige;
-        }
-        else
-        {
-            //return GetZebraColor(iteration);
-            return niceColor(z, c, iteration);
-        }
-    }
-
-    private Color niceColor(ComplexNumber z, ComplexNumber c, int iteration)
-    {
-        for (int i = 0; i < 3; i++)
-        {
-            z = z & c;
-            iteration++;
-        }
-
-        double mu = iteration + 1 -
-            Math.Log(Math.Log(z.Magnitude())) / MaxValueExtentLog;
-        if (ColorStyle2)
-        {
-            mu = mu / MaxIterations * Colors.Count;
-        }
-        int clr1 = (int)mu;
-        double t2 = mu - clr1;
-        double t1 = 1 - t2;
-        clr1 = clr1 % Colors.Count;
-        int clr2 = (clr1 + 1) % Colors.Count;
-
-        byte r = (byte)(Colors[clr1].R * t1 + Colors[clr2].R * t2);
-        byte g = (byte)(Colors[clr1].G * t1 + Colors[clr2].G * t2);
-        byte b = (byte)(Colors[clr1].B * t1 + Colors[clr2].B * t2);
-
-        return Color.FromArgb(255, r, g, b);
-    }
-
-    private Color GetZebraColor(int iteration)
-    {
-        if (iteration % 2 == 0)
-            return Color.White;
-        else
-            return Color.Black;
-    }
-
-
-    void GenerateBitmap(Bitmap bitmap) 
-    {
-        double scale = 2 * MaxValueExtent / Math.Min(bitmap.Width, bitmap.Height) * GlobScale;
-        for (int i = 0; i < bitmap.Height; i++)
-        {
-            double y = (bitmap.Height / 2 - i) * scale - beginY;
-            for (int j = 0; j < bitmap.Width; j++)
-            {
-                double x = (j - bitmap.Width / 2) * scale + beginX;
-                bitmap.SetPixel(j, i, CalcMandelbrotSetColor(new ComplexNumber(x, y)));
-            }
-        }
-    }
-    
 
     private void MainForm_Load(object sender, EventArgs e)
     {
-        thread = new Thread(() =>thread_Proc(pictureBox2.ClientSize));
+        thread = new Thread(() => thread_Proc(pictureBox2.ClientSize));
         thread.IsBackground = true;
         thread.Start();
 
     }
 
-    private void thread_Proc(Size clientSize) 
+    private void thread_Proc(Size clientSize)
     {
         // start from small image to provide instant display for user
         Size size = clientSize;
@@ -153,21 +69,17 @@ public class MandelbrotSetForm : Form
             int height = width * size.Height / size.Width;
             rec = new Rectangle(0, 0, width, height);
             Bitmap bitmap = new Bitmap(width, height, PixelFormat.Format24bppRgb);
-            GenerateBitmap(bitmap);
-            this.BeginInvoke(new SetNewBitmapDelegate(SetNewBitmap), bitmap, rec);
+            mandelbrot.GenerateBitmap(bitmap);
+
+            BeginInvoke(new SetNewBitmapDelegate(mandelbrot.SetNewBitmap), bitmap, rec);
             width *= 2;
         }
         // then generate final image
         int h = width * size.Height / size.Width;
         rec = new Rectangle(0, 0, width, h);
         Bitmap finalBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format24bppRgb);
-        GenerateBitmap(finalBitmap);
-        this.BeginInvoke(new SetNewBitmapDelegate(SetNewBitmap), finalBitmap, rec);
-    }
-
-    void SetNewBitmap(Bitmap image, Rectangle bounds)
-    {      
-        pictureBox2.BackgroundImage = image;
+        mandelbrot.GenerateBitmap(finalBitmap);
+        this.BeginInvoke(new SetNewBitmapDelegate(mandelbrot.SetNewBitmap), finalBitmap, rec);
     }
 
     delegate void SetNewBitmapDelegate(Bitmap image, Rectangle rec);
@@ -184,15 +96,15 @@ public class MandelbrotSetForm : Form
         thread.Abort();
         float x = (float)e.X / (float)pictureBox2.Width * 2 - 1;
         float y = (float)e.Y / (float)pictureBox2.Height * 2 - 1;
-        beginX += x * GlobScale * 2;
-        textBoxX.Text = beginX.ToString();
-        beginY += y * GlobScale * 2;
-        textBoxY.Text = beginY.ToString();
+        mandelbrot.beginX += x * mandelbrot.GlobScale * 2;
+        textBoxX.Text = mandelbrot.beginX.ToString();
+        mandelbrot.beginY += y * mandelbrot.GlobScale * 2;
+        textBoxY.Text = mandelbrot.beginY.ToString();
         if (e.Button == MouseButtons.Left)
-            GlobScale /= 2;
+            mandelbrot.GlobScale /= 2;
         if (e.Button == MouseButtons.Right)
-            GlobScale *= 2;
-        textBoxScale.Text = GlobScale.ToString();
+            mandelbrot.GlobScale *= 2;
+        textBoxScale.Text = mandelbrot.GlobScale.ToString();
         MainForm_Load(sender, e);
     }
 
@@ -207,19 +119,19 @@ public class MandelbrotSetForm : Form
             
             //double y = double.Parse(textBoxY.Text, System.Globalization.NumberStyles.Number);
             double y = StringToDouble(textBoxY.Text);
-            beginX = x; beginY = y;
+            mandelbrot.beginX = x; mandelbrot.beginY = y;
 
             //double scl = double.Parse(textBoxScale.Text, System.Globalization.NumberStyles.Number);
             double scl = StringToDouble(textBoxScale.Text);
             if (scl > 0)
-                GlobScale = scl;
+                mandelbrot.GlobScale = scl;
             else
             {
-                GlobScale = 1;
+                mandelbrot.GlobScale = 1;
                 textBoxScale.Text = "1";
             }
             int max = int.Parse(textBoxIter.Text, System.Globalization.NumberStyles.Number);
-            MaxIterations = max;
+            mandelbrot.MaxIterations = max;
         }
         MainForm_Load(sender, e);
     }
@@ -230,13 +142,13 @@ public class MandelbrotSetForm : Form
     private void button2_Click(object sender, EventArgs e)
     {
         thread.Abort();
-        beginX = -1.0079;
+        mandelbrot.beginX = -1.0079;
         textBoxX.Text = "-1,0079";
-        beginY = 0.3112109;
+        mandelbrot.beginY = 0.3112109;
         textBoxY.Text = "0,3112109";
-        GlobScale = 1.953125E-3;
+        mandelbrot.GlobScale = 1.953125E-3;
         textBoxScale.Text = "1,953125E-3";
-        MaxIterations = 1000;
+        mandelbrot.MaxIterations = 1000;
         textBoxIter.Text = "1000";
         MainForm_Load(sender, e);
     }
@@ -245,11 +157,11 @@ public class MandelbrotSetForm : Form
     private void button3_Click(object sender, EventArgs e)
     {
         thread.Abort();
-        beginX = 0;
+        mandelbrot.beginX = 0;
         textBoxX.Text = "0";
-        beginY = 0;
+        mandelbrot.beginY = 0;
         textBoxY.Text = "0";
-        GlobScale = 1;
+        mandelbrot.GlobScale = 1;
         textBoxScale.Text = "1";
         MainForm_Load(sender, e);
     }
@@ -420,26 +332,26 @@ public class MandelbrotSetForm : Form
 
     private void ColourSelection_SelectedIndexChanged(object sender, EventArgs e)
     {
-        Colors = new List<Color>();
+        mandelbrot.Colors = new List<Color>();
         if(ColourSelection.SelectedIndex ==0)
         {
-            Colors.Add(Color.Peru); Colors.Add(Color.Navy); Colors.Add(Color.AntiqueWhite);
-            ColorStyle2 = false;
+            mandelbrot.Colors.Add(Color.Peru); mandelbrot.Colors.Add(Color.Navy); mandelbrot.Colors.Add(Color.AntiqueWhite);
+            mandelbrot.ColorStyle2 = false;
         }
         if (ColourSelection.SelectedIndex == 1)
         {
-            Colors.Add(Color.DarkBlue); Colors.Add(Color.Yellow); Colors.Add(Color.MistyRose); Colors.Add(Color.RoyalBlue);
-            ColorStyle2 = true;
+            mandelbrot.Colors.Add(Color.DarkBlue); mandelbrot.Colors.Add(Color.Yellow); mandelbrot.Colors.Add(Color.MistyRose); mandelbrot.Colors.Add(Color.RoyalBlue);
+            mandelbrot.ColorStyle2 = true;
         }
         if (ColourSelection.SelectedIndex == 2)
         {
-            Colors.Add(Color.Red); Colors.Add(Color.Orange); Colors.Add(Color.Green); Colors.Add(Color.Yellow); Colors.Add(Color.Blue); Colors.Add(Color.Indigo); Colors.Add(Color.Violet);
-            ColorStyle2 = true;
+            mandelbrot.Colors.Add(Color.Red); mandelbrot.Colors.Add(Color.Orange); mandelbrot.Colors.Add(Color.Green); mandelbrot.Colors.Add(Color.Yellow); mandelbrot.Colors.Add(Color.Blue); mandelbrot.Colors.Add(Color.Indigo); mandelbrot.Colors.Add(Color.Violet);
+            mandelbrot.ColorStyle2 = true;
         }
         if(ColourSelection.SelectedIndex == 3)
         {
-            Colors.Add(Color.Turquoise); Colors.Add(Color.IndianRed); Colors.Add(Color.IndianRed);
-            ColorStyle2 = true;
+            mandelbrot.Colors.Add(Color.Turquoise); mandelbrot.Colors.Add(Color.IndianRed); mandelbrot.Colors.Add(Color.IndianRed);
+            mandelbrot.ColorStyle2 = true;
         }
     }
 
@@ -478,37 +390,4 @@ public class MandelbrotSetForm : Form
     }
 
     #endregion
-}
-
-struct ComplexNumber
-{
-    public double Re;
-    public double Im;
-
-    public ComplexNumber(double re, double im)
-    {
-        this.Re = re;
-        this.Im = im;
-    }
-
-    public static ComplexNumber operator +(ComplexNumber x, ComplexNumber y)
-    {
-        return new ComplexNumber(x.Re + y.Re, x.Im + y.Im);
-    }
-
-    public static ComplexNumber operator *(ComplexNumber x, ComplexNumber y)
-    {
-        return new ComplexNumber(x.Re * y.Re - x.Im * y.Im,
-            x.Re * y.Im + x.Im * y.Re);
-    }
-    public static ComplexNumber operator &(ComplexNumber x, ComplexNumber y)
-    {
-        return new ComplexNumber(x.Re * x.Re - x.Im * x.Im + y.Re,
-            2 * x.Re * x.Im + y.Im);
-    }
-
-    public double Magnitude()
-    {
-        return Re * Re + Im * Im;
-    }
 }
