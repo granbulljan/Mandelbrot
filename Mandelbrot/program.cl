@@ -1,4 +1,12 @@
-﻿__kernel void Mandelbrot(write_only image2d_t outputImage)
+﻿__kernel void Test(write_only image2d_t outputImage)
+{
+	int x = get_global_id(0);
+	int y = get_global_id(1);
+	write_imagef(outputImage, (int2)(x, y), (float4)(128,128,128,1.0f));
+}
+
+
+__kernel void Mandelbrot(write_only image2d_t outputImage)
 {
 	int x = get_global_id(0);
 	int y = get_global_id(1);

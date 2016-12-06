@@ -87,7 +87,7 @@ class OpenCLHelp
                 return;
             }
             //Create the required kernel (entry function)
-            Kernel kernel = Cl.CreateKernel(program, "imagingTest", out error);
+            Kernel kernel = Cl.CreateKernel(program, "Mandelbrot", out error);
             CheckErr(error, "Cl.CreateKernel");
 
 
