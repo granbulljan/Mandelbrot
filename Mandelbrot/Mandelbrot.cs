@@ -12,6 +12,8 @@ using System.Globalization;
 public class MandelbrotSetForm : Form
 {
     Thread thread;
+    MandelBrotCalc mandelbrot;
+    CultureInfo culture;
 
     private Button OKButton;
     private PictureBox pictureBox2;
@@ -25,10 +27,8 @@ public class MandelbrotSetForm : Form
     private ComboBox ColourSelection;
     private ComboBox LocationSelection;
 
-    MandelBrotCalc mandelbrot;
+    OpenCLHelp OpenCl;
 
-
-    CultureInfo culture;
 
     public MandelbrotSetForm()
     {
@@ -48,6 +48,12 @@ public class MandelbrotSetForm : Form
         pictureBox2.MouseClick += new MouseEventHandler(picturBox2_Click);
 
         mandelbrot = new MandelBrotCalc(pictureBox2);
+
+        OpenCl = new OpenCLHelp();
+        string programPath = System.Environment.CurrentDirectory + "/../../image.png";
+        Bitmap outputBitmap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
+        OpenCl.ImagingTest(programPath, outputBitmap);
+
     }
 
     private void MainForm_Load(object sender, EventArgs e)
@@ -114,14 +120,9 @@ public class MandelbrotSetForm : Form
         thread.Abort();
         if (textBoxX.Text != null && textBoxY.Text != null && textBoxScale.Text != null && textBoxIter.Text != null)
         {
-            //double x = double.Parse(textBoxX.Text, System.Globalization.NumberStyles.Number);
             double x = StringToDouble(textBoxX.Text);
-            
-            //double y = double.Parse(textBoxY.Text, System.Globalization.NumberStyles.Number);
             double y = StringToDouble(textBoxY.Text);
             mandelbrot.beginX = x; mandelbrot.beginY = y;
-
-            //double scl = double.Parse(textBoxScale.Text, System.Globalization.NumberStyles.Number);
             double scl = StringToDouble(textBoxScale.Text);
             if (scl > 0)
                 mandelbrot.GlobScale = scl;
@@ -130,13 +131,11 @@ public class MandelbrotSetForm : Form
                 mandelbrot.GlobScale = 1;
                 textBoxScale.Text = "1";
             }
-            int max = int.Parse(textBoxIter.Text, System.Globalization.NumberStyles.Number);
+            int max = int.Parse(textBoxIter.Text);
             mandelbrot.MaxIterations = max;
         }
         MainForm_Load(sender, e);
     }
-
-
 
     //Nice button
     private void button2_Click(object sender, EventArgs e)

@@ -15,3 +15,4 @@ C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.cspro
 C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\MandelbrotSetForm.resources
 C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.Properties.Resources.resources
 C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\obj\Release\Mandelbrot.csproj.GenerateResource.Cache
+C:\Users\Jan\Documents\GitHub\Mandelbrot\Mandelbrot\bin\Release\OpenCL.Net.dll

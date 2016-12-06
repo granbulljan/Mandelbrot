@@ -56,11 +56,11 @@ class OpenCLHelp
         CheckErr(error, "Cl.CreateContext");
     }
 
-    public void ImagingTest(string inputImagePath, string outputImagePath)
+    public void ImagingTest(string outputImagePath, Bitmap inputBitmap)
     {
         ErrorCode error;
         //Load and compile kernel source code.
-        string programPath = System.Environment.CurrentDirectory + "/../../ImagingTest.cl";
+        string programPath = System.Environment.CurrentDirectory + "/../../program.cl";
         //The path to the source file may vary
 
         if (!System.IO.File.Exists(programPath))
@@ -90,6 +90,8 @@ class OpenCLHelp
             Kernel kernel = Cl.CreateKernel(program, "imagingTest", out error);
             CheckErr(error, "Cl.CreateKernel");
 
+
+            /*
             int intPtrSize = 0;
             intPtrSize = Marshal.SizeOf(typeof(IntPtr));
             //Image's RGBA data converted to an unmanaged[] array
@@ -134,7 +136,16 @@ class OpenCLHelp
 
                 CheckErr(error, "Cl.CreateImage2D input");
             }
+            */
             //Unmanaged output image's raw RGBA byte[] array
+            BitmapData bitmapData = inputBitmap.LockBits(new Rectangle(0, 0, inputBitmap.Width, inputBitmap.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
+            int inputImgBytesSize = bitmapData.Stride * bitmapData.Height;
+            int inputImgWidth = inputBitmap.Width;
+            int inputImgHeight = inputBitmap.Height;
+            int intPtrSize = Marshal.SizeOf(typeof(IntPtr));
+            OpenCL.Net.ImageFormat clImageFormat = new OpenCL.Net.ImageFormat(ChannelOrder.RGBA, ChannelType.Unsigned_Int8);
+
+
             byte[] outputByteArray = new byte[inputImgBytesSize];
             //Allocate OpenCL image memory buffer
             Mem outputImage2DBuffer = (Mem)Cl.CreateImage2D(_context, MemFlags.CopyHostPtr |
@@ -142,8 +153,7 @@ class OpenCLHelp
                 (IntPtr)inputImgHeight, (IntPtr)0, outputByteArray, out error);
             CheckErr(error, "Cl.CreateImage2D output");
             //Pass the memory buffers to our kernel function
-            error = Cl.SetKernelArg(kernel, 0, (IntPtr)intPtrSize, inputImage2DBuffer);
-            error |= Cl.SetKernelArg(kernel, 1, (IntPtr)intPtrSize, outputImage2DBuffer);
+            error = Cl.SetKernelArg(kernel, 0, (IntPtr)intPtrSize, outputImage2DBuffer);
             CheckErr(error, "Cl.SetKernelArg");
 
             //Create a command queue, where all of the commands for execution will be added
@@ -154,8 +164,15 @@ class OpenCLHelp
             IntPtr[] originPtr = new IntPtr[] { (IntPtr)0, (IntPtr)0, (IntPtr)0 };    //x, y, z
             IntPtr[] regionPtr = new IntPtr[] { (IntPtr)inputImgWidth, (IntPtr)inputImgHeight, (IntPtr)1 };    //x, y, z
             IntPtr[] workGroupSizePtr = new IntPtr[] { (IntPtr)inputImgWidth, (IntPtr)inputImgHeight, (IntPtr)1 };
+
+            error = Cl.EnqueueWriteImage(cmdQueue, outputImage2DBuffer, Bool.True,
+               originPtr, regionPtr, (IntPtr)0, (IntPtr)0, outputByteArray, 0, null, out clevent);
+
+            /*
             error = Cl.EnqueueWriteImage(cmdQueue, inputImage2DBuffer, Bool.True,
                originPtr, regionPtr, (IntPtr)0, (IntPtr)0, inputByteArray, 0, null, out clevent);
+*/
+
             CheckErr(error, "Cl.EnqueueWriteImage");
             //Execute our kernel (OpenCL code)
             error = Cl.EnqueueNDRangeKernel(cmdQueue, kernel, 2, null, workGroupSizePtr, null, 0, null, out clevent);
@@ -171,14 +188,19 @@ class OpenCLHelp
             Cl.ReleaseKernel(kernel);
             Cl.ReleaseCommandQueue(cmdQueue);
 
-            Cl.ReleaseMemObject(inputImage2DBuffer);
+            //Cl.ReleaseMemObject(inputImage2DBuffer);
             Cl.ReleaseMemObject(outputImage2DBuffer);
             //Get a pointer to our unmanaged output byte[] array
             GCHandle pinnedOutputArray = GCHandle.Alloc(outputByteArray, GCHandleType.Pinned);
             IntPtr outputBmpPointer = pinnedOutputArray.AddrOfPinnedObject();
             //Create a new bitmap with processed data and save it to a file.
+
             Bitmap outputBitmap = new Bitmap(inputImgWidth, inputImgHeight,
-                  inputImgStride, PixelFormat.Format32bppArgb, outputBmpPointer);
+                  bitmapData.Stride, PixelFormat.Format32bppArgb, outputBmpPointer);
+
+            /*
+            Bitmap outputBitmap = new Bitmap(inputImgWidth, inputImgHeight,
+                  inputImgStride, PixelFormat.Format32bppArgb, outputBmpPointer);*/
 
             outputBitmap.Save(outputImagePath, System.Drawing.Imaging.ImageFormat.Png);
             pinnedOutputArray.Free();
