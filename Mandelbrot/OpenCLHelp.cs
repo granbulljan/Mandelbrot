@@ -56,7 +56,7 @@ class OpenCLHelp
         CheckErr(error, "Cl.CreateContext");
     }
 
-    public void ImagingTest(string outputImagePath, Bitmap inputBitmap)
+    public Bitmap GPUMandel(Bitmap inputBitmap)
     {
         ErrorCode error;
         //Load and compile kernel source code.
@@ -66,7 +66,7 @@ class OpenCLHelp
         if (!System.IO.File.Exists(programPath))
         {
             Console.WriteLine("Program doesn't exist at path " + programPath);
-            return;
+            return inputBitmap;
         }
 
         string programSource = System.IO.File.ReadAllText(programPath);
@@ -84,66 +84,22 @@ class OpenCLHelp
                 CheckErr(error, "Cl.GetProgramBuildInfo");
                 Console.WriteLine("Cl.GetProgramBuildInfo != Success");
                 Console.WriteLine(Cl.GetProgramBuildInfo(program, _device, ProgramBuildInfo.Log, out error));
-                return;
+                return inputBitmap;
             }
             //Create the required kernel (entry function)
             Kernel kernel = Cl.CreateKernel(program, "Mandelbrot", out error);
             CheckErr(error, "Cl.CreateKernel");
 
-
-            /*
-            int intPtrSize = 0;
-            intPtrSize = Marshal.SizeOf(typeof(IntPtr));
-            //Image's RGBA data converted to an unmanaged[] array
-            byte[] inputByteArray;
-            //OpenCL memory buffer that will keep our image's byte[] data.
-            Mem inputImage2DBuffer;
-
-            OpenCL.Net.ImageFormat clImageFormat = new OpenCL.Net.ImageFormat(ChannelOrder.RGBA, ChannelType.Unsigned_Int8);
-            int inputImgWidth, inputImgHeight;
-
-            int inputImgBytesSize;
-            int inputImgStride;
-            //Try loading the input image
-            using (FileStream imageFileStream = new FileStream(inputImagePath, FileMode.Open))
-            {
-                System.Drawing.Image inputImage = System.Drawing.Image.FromStream(imageFileStream);
-
-                if (inputImage == null)
-                {
-                    Console.WriteLine("Unable to load input image");
-                    return;
-                }
-
-                inputImgWidth = inputImage.Width;
-                inputImgHeight = inputImage.Height;
-
-                System.Drawing.Bitmap bmpImage = new System.Drawing.Bitmap(inputImage);
-                //Get raw pixel data of the bitmap
-                //The format should match the format of clImageFormat
-                BitmapData bitmapData = bmpImage.LockBits(new Rectangle(0, 0, bmpImage.Width, bmpImage.Height),
-                              ImageLockMode.ReadOnly, PixelFormat.Format32bppArgb);//inputImage.PixelFormat);
-                inputImgStride = bitmapData.Stride;
-                inputImgBytesSize = bitmapData.Stride * bitmapData.Height;
-
-                //Copy the raw bitmap data to an unmanaged byte[] array
-                inputByteArray = new byte[inputImgBytesSize];
-                Marshal.Copy(bitmapData.Scan0, inputByteArray, 0, inputImgBytesSize);
-                //Allocate OpenCL image memory buffer
-                inputImage2DBuffer = (Mem)Cl.CreateImage2D(_context, MemFlags.CopyHostPtr | MemFlags.ReadOnly,clImageFormat, (IntPtr)bitmapData.Width, (IntPtr)bitmapData.Height,
-                                                    (IntPtr)0, inputByteArray, out error);
-
-
-                CheckErr(error, "Cl.CreateImage2D input");
-            }
-            */
+            
             //Unmanaged output image's raw RGBA byte[] array
             BitmapData bitmapData = inputBitmap.LockBits(new Rectangle(0, 0, inputBitmap.Width, inputBitmap.Height), ImageLockMode.ReadWrite, PixelFormat.Format32bppArgb);
             int inputImgBytesSize = bitmapData.Stride * bitmapData.Height;
             int inputImgWidth = inputBitmap.Width;
             int inputImgHeight = inputBitmap.Height;
             int intPtrSize = Marshal.SizeOf(typeof(IntPtr));
+
             OpenCL.Net.ImageFormat clImageFormat = new OpenCL.Net.ImageFormat(ChannelOrder.RGBA, ChannelType.Unsigned_Int8);
+            //OpenCL.Net.ImageFormat clImageFormat = new OpenCL.Net.ImageFormat(ChannelOrder.RGBA, ChannelType.Float);
 
 
             byte[] outputByteArray = new byte[inputImgBytesSize];
@@ -167,11 +123,6 @@ class OpenCLHelp
 
             error = Cl.EnqueueWriteImage(cmdQueue, outputImage2DBuffer, Bool.True,
                originPtr, regionPtr, (IntPtr)0, (IntPtr)0, outputByteArray, 0, null, out clevent);
-
-            /*
-            error = Cl.EnqueueWriteImage(cmdQueue, inputImage2DBuffer, Bool.True,
-               originPtr, regionPtr, (IntPtr)0, (IntPtr)0, inputByteArray, 0, null, out clevent);
-*/
 
             CheckErr(error, "Cl.EnqueueWriteImage");
             //Execute our kernel (OpenCL code)
@@ -198,12 +149,10 @@ class OpenCLHelp
             Bitmap outputBitmap = new Bitmap(inputImgWidth, inputImgHeight,
                   bitmapData.Stride, PixelFormat.Format32bppArgb, outputBmpPointer);
 
-            /*
-            Bitmap outputBitmap = new Bitmap(inputImgWidth, inputImgHeight,
-                  inputImgStride, PixelFormat.Format32bppArgb, outputBmpPointer);*/
+            return outputBitmap;
 
-            outputBitmap.Save(outputImagePath, System.Drawing.Imaging.ImageFormat.Png);
-            pinnedOutputArray.Free();
+            //outputBitmap.Save(outputImagePath, System.Drawing.Imaging.ImageFormat.Png);
+            //pinnedOutputArray.Free();
         }
     }
 

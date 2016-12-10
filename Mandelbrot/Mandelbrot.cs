@@ -28,6 +28,7 @@ public class MandelbrotSetForm : Form
     private ComboBox LocationSelection;
 
     OpenCLHelp OpenCl;
+    Bitmap OpenCLImage;
 
 
     public MandelbrotSetForm()
@@ -50,14 +51,15 @@ public class MandelbrotSetForm : Form
         mandelbrot = new MandelBrotCalc(pictureBox2);
 
         OpenCl = new OpenCLHelp();
-        string programPath = System.Environment.CurrentDirectory + "/../../image.png";
-        Bitmap outputBitmap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
-        OpenCl.ImagingTest(programPath, outputBitmap);
+        //string programPath = System.Environment.CurrentDirectory + "/../../image.png";
+        //Bitmap outputBitmap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
+        //OpenCLImage = OpenCl.GPUMandel(outputBitmap);
 
     }
 
     private void MainForm_Load(object sender, EventArgs e)
     {
+
         thread = new Thread(() => thread_Proc(pictureBox2.ClientSize));
         thread.IsBackground = true;
         thread.Start();
@@ -66,6 +68,9 @@ public class MandelbrotSetForm : Form
 
     private void thread_Proc(Size clientSize)
     {
+        Bitmap outputBitmap = new Bitmap(pictureBox2.Width, pictureBox2.Height);
+        pictureBox2.BackgroundImage = OpenCl.GPUMandel(outputBitmap);
+        /*
         // start from small image to provide instant display for user
         Size size = clientSize;
         Rectangle rec;
@@ -86,6 +91,8 @@ public class MandelbrotSetForm : Form
         Bitmap finalBitmap = new Bitmap(size.Width, size.Height, PixelFormat.Format24bppRgb);
         mandelbrot.GenerateBitmap(finalBitmap);
         this.BeginInvoke(new SetNewBitmapDelegate(mandelbrot.SetNewBitmap), finalBitmap, rec);
+        Thread.Sleep(200);
+        mandelbrot.SetNewBitmap(OpenCLImage,rec);*/
     }
 
     delegate void SetNewBitmapDelegate(Bitmap image, Rectangle rec);
